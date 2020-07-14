@@ -73,7 +73,24 @@ namespace KerbalWind
         }
     }
 
+    class KerbalWindConfig
+    {
+        public FloatCurve LightTurbulence;
+        public FloatCurve ModerateTurbulence;
+        public FloatCurve SevereTurbulence;
+        public FloatCurve AltitudeMultiplier;
 
+        public KerbalWindConfig()
+        {
+            // Just default them
+            Keyframe[] defaultKeys = { new Keyframe(0f, 1f, 0f, 0f) };
+
+            LightTurbulence = new FloatCurve(defaultKeys);
+            ModerateTurbulence = new FloatCurve(defaultKeys);
+            SevereTurbulence = new FloatCurve(defaultKeys);
+            AltitudeMultiplier = new FloatCurve(defaultKeys);
+        }
+    };
 
     /*
 Light turb
@@ -123,11 +140,7 @@ key = 120 1.5 0 0
         float turbSev = 0f;
         System.Random rand = new System.Random();
 
-        FloatCurve LightTurbulence;
-        FloatCurve ModerateTurbulence;
-        FloatCurve SevereTurbulence;
-
-        FloatCurve AltitudeMultiplier;
+        KerbalWindConfig config;
         
         class LateralProcessState
         {
@@ -156,7 +169,7 @@ key = 120 1.5 0 0
 
         public float altMultiplier(float altitude)
         {
-            return AltitudeMultiplier.Evaluate(altitude);
+            return config.AltitudeMultiplier.Evaluate(altitude);
         }
 
         public float randGauss()
@@ -168,51 +181,10 @@ key = 120 1.5 0 0
             return (float)r;
         }
 
-        public void Init() 
+        public void Init(KerbalWindConfig cfg)
         {
             Y_u = Y_v = Y_w = 0f;
-
-            if (AltitudeMultiplier == null)
-            {
-                Keyframe[] lightKeys = {
-                new Keyframe(0f, 0f, 0.003f, 0.003f),
-                new Keyframe(1000f, 3f, 0.00225f, 0.00225f),
-                new Keyframe(2000f, 4.5f, 0.000675f, 0.000675f),
-                new Keyframe(12000f, 3f, -0.0001166667f, -0.0001166667f),
-                new Keyframe(18000f, 2.5f, 0f, 0f),
-                };
-                LightTurbulence = new FloatCurve(lightKeys);
-
-                Keyframe[] moderateKeys = {
-                new Keyframe(0f, 0f, 0.006f, 0.006f),
-                new Keyframe(1000f, 6f, 0.0045f, 0.0045f),
-                new Keyframe(2000f, 9f, 0.001428571f, 0.001428571f),
-                new Keyframe(30000f, 5f, -0.0001547619f, -0.0001547619f),
-                new Keyframe(45000f, 2.5f, 0f, 0f),
-                };
-                ModerateTurbulence = new FloatCurve(moderateKeys);
-
-                Keyframe[] severeKeys = {
-                new Keyframe(0f, 0f, 0.006f, 0.006f),
-                new Keyframe(1000f, 6f, 0.006f, 0.006f),
-                new Keyframe(3000f, 18f, 0.002962963f, 0.002962963f),
-                new Keyframe(30000f, 16f, -7.037037E-05f, -7.037037E-05f),
-                new Keyframe(45000f, 15f, -0.0002119048f, -0.0002119048f),
-                new Keyframe(80000f, 2.5f, 0f, 0f),
-                };
-                SevereTurbulence = new FloatCurve(severeKeys);
-
-                Keyframe[] altitudeKeys = {
-                new Keyframe(100f, 1f, 0f, 0f),
-                new Keyframe(10000f, 2.5f, -2.424242e-05f, -2.424242e-05f),
-                new Keyframe(20000f, 0.5f, -4.999994e-06f, -4.999994e-06f),
-                new Keyframe(70000f, 10f, -0.0001688889f, -0.0001688889f),
-                new Keyframe(88000f, 0.5f, -6.25e-5f, -6.25e-5f),
-                new Keyframe(100000f, 6f, 0.0001166667f, 0.0001166667f),
-                new Keyframe(120000f, 1.5f, 0f, 0f),
-                };
-                AltitudeMultiplier = new FloatCurve(altitudeKeys);
-            }
+            config = cfg;
         }
 
         private void ComputeProcessParameters(float altitude, float altitude_above_ground, float wind_speed)
@@ -243,19 +215,19 @@ key = 120 1.5 0 0
                 float highalt_turbulence;
                 if (turbulence_severity < 6f)
                 {
-                    highalt_turbulence = LightTurbulence.Evaluate(h);
+                    highalt_turbulence = config.LightTurbulence.Evaluate(h);
                 }
                 else if (turbulence_severity < 12f)
                 {
-                    highalt_turbulence = Mathf.Lerp(LightTurbulence.Evaluate(h), ModerateTurbulence.Evaluate(h), (turbulence_severity - 6f) / 6f);
+                    highalt_turbulence = Mathf.Lerp(config.LightTurbulence.Evaluate(h), config.ModerateTurbulence.Evaluate(h), (turbulence_severity - 6f) / 6f);
                 }
                 else if (turbulence_severity < 18f)
                 {
-                    highalt_turbulence = Mathf.Lerp(ModerateTurbulence.Evaluate(h), SevereTurbulence.Evaluate(h), (turbulence_severity - 12f) / 6f);
+                    highalt_turbulence = Mathf.Lerp(config.ModerateTurbulence.Evaluate(h), config.SevereTurbulence.Evaluate(h), (turbulence_severity - 12f) / 6f);
                 }
                 else
                 {
-                    highalt_turbulence = SevereTurbulence.Evaluate(h);
+                    highalt_turbulence = config.SevereTurbulence.Evaluate(h);
                 }
                 highalt_turbulence /= M_TO_FEET;
 
@@ -414,6 +386,7 @@ key = 120 1.5 0 0
         // book keeping data
         Matrix4x4  mSurfaceToWorld = Matrix4x4.identity; // orientation of the planet surface under the vessel in world space
         ContinuousGustsModel gustsmodel = new ContinuousGustsModel();
+        KerbalWindConfig config;
 
         bool RegisterWithFAR()
         {
@@ -493,6 +466,7 @@ key = 120 1.5 0 0
                 this.enabled = false;
             }
 
+            LoadConfig();
             LoadSettings();
             InitializeToolbars();
             OnGuiVisibilityChange();
@@ -508,7 +482,7 @@ key = 120 1.5 0 0
             weatherTime = -1f;
 
             CalculateWeather();
-            gustsmodel.Init();
+            gustsmodel.Init(config);
             ComputeWindVector();
         }
 
@@ -559,6 +533,24 @@ key = 120 1.5 0 0
             windSpdLabel = medianWindSpd.ToString("F1");
             gustDurationLabel = gustDurationGuiState.ToString("F1");
             gustStrengthLabel = gustStrengthGuiState.ToString("F1");
+        }
+
+        void LoadConfig()
+        {
+            config = new KerbalWindConfig();
+
+            ConfigNode node = GameDatabase.Instance.GetConfigNode("KERBAL_WIND");
+            if (node != null)
+            {
+                if (node.HasNode("LightTurbulence"))
+                    config.LightTurbulence.Load(node.GetNode("LightTurbulence"));
+                if (node.HasNode("ModerateTurbulence"))
+                    config.ModerateTurbulence.Load(node.GetNode("ModerateTurbulence"));
+                if (node.HasNode("SevereTurbulence"))
+                    config.SevereTurbulence.Load(node.GetNode("SevereTurbulence"));
+                if (node.HasNode("AltitudeMultiplier"))
+                    config.AltitudeMultiplier.Load(node.GetNode("AltitudeMultiplier"));
+            }
         }
         #endregion
 
@@ -902,7 +894,7 @@ key = 120 1.5 0 0
             windDirection = new Vector3(-Mathf.Cos(currentWindDir * Mathf.Deg2Rad), 0f, -Mathf.Sin(currentWindDir * Mathf.Deg2Rad));
             windEnabled  = true;
             windVector = currentWindSpeed * windDirection;
-            gustsmodel.Init();
+            gustsmodel.Init(config);
 
             string WindLabelNS = (windDirection.x < 0f) ? "N" : "S";
             string windLabelEW = (windDirection.z < 0f) ? "E" : "W";
