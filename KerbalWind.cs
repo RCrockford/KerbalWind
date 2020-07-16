@@ -539,8 +539,7 @@ key = 120 1.5 0 0
         {
             config = new KerbalWindConfig();
 
-            ConfigNode node = GameDatabase.Instance.GetConfigNode("KERBAL_WIND");
-            if (node != null)
+            foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("KERBAL_WIND"))
             {
                 if (node.HasNode("LightTurbulence"))
                     config.LightTurbulence.Load(node.GetNode("LightTurbulence"));
@@ -550,6 +549,7 @@ key = 120 1.5 0 0
                     config.SevereTurbulence.Load(node.GetNode("SevereTurbulence"));
                 if (node.HasNode("AltitudeMultiplier"))
                     config.AltitudeMultiplier.Load(node.GetNode("AltitudeMultiplier"));
+                break;
             }
         }
         #endregion
