@@ -36,7 +36,7 @@ using UnityEngine;
 using KSP.IO;
 using System.Reflection;
 using Noise;
-using EdyCommonTools;
+using FerramAerospaceResearch;
 
 namespace KerbalWind
 {
@@ -354,6 +354,7 @@ key = 120 1.5 0 0
         string      windDirLabel = "x";
         string      windowTitle  = "";
         bool        needsUpdate = true;
+        bool        extremeWeather = false;
         GUISkin     skin;
         // Weather
         OpenSimplex2S simplexNoise;
@@ -392,45 +393,8 @@ key = 120 1.5 0 0
         {
             try
             {
-                Type FARWind = null;
-                Type WindFunction = null;
-                foreach (var assembly in AssemblyLoader.loadedAssemblies)
-                {
-                    if (assembly.name == "FerramAerospaceResearch")
-                    {
-                        var types = assembly.assembly.GetExportedTypes();
-                        foreach (Type t in types)
-                        {
-                            if (t.FullName.Equals("FerramAerospaceResearch.FARWind"))
-                            {
-                                FARWind = t;
-                            }
-                            if (t.FullName.Equals("FerramAerospaceResearch.FARWind+WindFunction"))
-                            {
-                                WindFunction = t;
-                            }
-                        }
-                    }
-                }
-                if (FARWind == null)
-                {
-                    Debug.LogError("KerbalWind: unable to find FerramAerospaceResearch.FARWind");
-                    return false;
-                }
-                if (WindFunction == null)
-                {
-                    Debug.LogError("KerbalWind: unable to find FerramAerospaceResearch.FARWind+WindFunction");
-                    return false;
-                }
-                MethodInfo SetWindFunction = FARWind.GetMethod("SetWindFunction");
-                if (SetWindFunction == null)
-                {
-                    Debug.LogError("KerbalWind: unable to find FARWind.SetWindFunction");
-                    return false;
-                }
-                var del = Delegate.CreateDelegate(WindFunction, this, typeof(KerbalWind).GetMethod("GetTheWind"), true);
-                SetWindFunction.Invoke(null, new object[] { del });
-                return true; // jump out!
+                FerramAerospaceResearch.FARAtmosphere.SetWindFunction(GetTheWind);
+                return true;
             }
             catch (Exception e)
             {
@@ -510,6 +474,7 @@ key = 120 1.5 0 0
             settings.AddValue("windSpdGuiState", medianWindSpdGuiState);
             settings.AddValue("gustDurationGuiState", gustDurationGuiState);
             settings.AddValue("gustStrengthGuiState", gustStrengthGuiState);
+            settings.AddValue("extremeWeather", extremeWeather);
             settings.Save(AssemblyLoader.loadedAssemblies.GetPathByType(typeof(KerbalWind)) + "/settings.cfg");
         }
 
@@ -528,6 +493,7 @@ key = 120 1.5 0 0
                 Util.TryReadValue(ref medianWindSpdGuiState, settings, "windSpdGuiState");
                 Util.TryReadValue(ref gustDurationGuiState, settings, "gustDurationGuiState");
                 Util.TryReadValue(ref gustStrengthGuiState, settings, "gustStrengthGuiState");
+                Util.TryReadValue(ref extremeWeather, settings, "extremeWeather");
             }
             medianWindSpd = Util.Floor(medianWindSpdGuiState, 1); // round to 1 d.p. so we go relatively slowly in 0.1m/s steps while the MB is down.
             windSpdLabel = medianWindSpd.ToString("F1");
@@ -826,6 +792,12 @@ key = 120 1.5 0 0
                     const float speedFreq = 0.1f;
                     float speedSample = (float)CalculateSimplexNoise(weatherLat * speedFreq, weatherLng * speedFreq, noiseTime, 3, 0.25, 8d);
                     speedSample = speedSample * 0.5f + 0.5f;
+                    if (extremeWeather)
+                    {
+                        // Use a Kumaraswamy distribution with a = b = 0.5 to bias the values towards the extrema
+                        speedSample = (1 - (1 - speedSample) * (1 - speedSample));
+                        speedSample = speedSample * speedSample;
+                    }
                     // Because the distribution used is not bounded on the upper end, this needs to be clamped to avoid NaNs.
                     speedSample = Mathf.Clamp(speedSample, 0f, 0.9999f);
 
@@ -989,6 +961,12 @@ key = 120 1.5 0 0
                 GUILayout.BeginHorizontal();
                     MakeNumberEditField(ref gustStrengthLabel, ref gustStrengthGuiState, ref gustUpdate, 1);
                 GUILayout.EndHorizontal();
+
+                GUILayout.Space(4);
+                bool oldExtremeWeather = extremeWeather;
+                extremeWeather = GUILayout.Toggle(extremeWeather, "Extreme Weather", GUILayout.ExpandWidth(true));
+                if (oldExtremeWeather != extremeWeather)
+                    needsUpdate = true;
 
                 GUILayout.Space(4);
                     GUILayout.Label("Weather", GUILayout.ExpandWidth(true));

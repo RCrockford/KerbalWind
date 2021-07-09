@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>KerbalWind</RootNamespace>
     <AssemblyName>KerbalWind</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -38,6 +38,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="FerramAerospaceResearch">
+      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\FerramAerospaceResearch\Plugins\FerramAerospaceResearch.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
